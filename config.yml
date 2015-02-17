@@ -1,0 +1,8 @@
+dataset:
+    pos_img_dir: ./INRIAPerson/Train/pos/
+    neg_img_dir: ./INRIAPerson/Train/neg/
+    annotation_dir: './INRIAPerson/Train/annotations/'
+output:
+    cropped_dir: './INRIAPerson/Train/2015cropped/'
+    bounding_box_out_dir: ./INRIAPerson/Train/2015bounding_box/
+    out_dir: ./INRIAPerson/Train/2015out/
