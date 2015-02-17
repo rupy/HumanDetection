@@ -7,6 +7,7 @@ import image_util as iu
 import logging
 import sys
 import yaml
+import subprocess
 
 class InriaPersonDataSet:
 
@@ -33,6 +34,7 @@ class InriaPersonDataSet:
         self.cropped_dir = self.config['output']['cropped_dir']
         self.bounding_box_out_dir = self.config['output']['bounding_box_out_dir']
         self.out_dir = self.config['output']['out_dir']
+        self.cascade_xml_dir = self.config['output']['cascade_xml']
 
         # create output paths
         if not os.path.isdir(self.cropped_dir):
@@ -170,12 +172,92 @@ class InriaPersonDataSet:
             out_file_name = 'c_' + os.path.splitext(file_name)[0] + '_' + str(i) + '.' + os.path.splitext(file_name)[1]
             cv2.imwrite(self.cropped_dir + out_file_name, cropped_img)
 
+    def create_positive_dat(self):
+        output_text = ""
+        self.logger.info("begin creating positive.dat")
+        for file_name in self.pos_img_files:
+
+            # skip hidden file
+            if file_name.startswith('.'):
+                continue
+
+            file_path = self.pos_img_dir + file_name
+            annotation_info = self.parse_annotation_file(file_name)
+            output_text += "%s  %d  " % (file_path, annotation_info['ground_truth'])
+            for object_info in annotation_info['object_list']:
+                x_min, y_min = object_info['bounding_box'][0]
+                x_max, y_max = object_info['bounding_box'][1]
+                width = x_max - x_min
+                height = y_max - y_min
+                output_text += "%d %d %d %d  " % (x_min, y_min, width, height)
+            output_text += "\n"
+        # print output_text
+        self.logger.info("writing data to positive.dat")
+        f = open('positive.dat', 'w')
+        f.write(output_text)
+        f.close()
+        self.logger.info("completed writing data to positive.dat")
+
+        params = {
+            'info': 'positive.dat',
+            'vec': 'positive.vec',
+            'num': len(self.pos_img_files),
+            'width': 40,
+            'height': 40
+        }
+        cmd = "opencv_createsamples -info %(info)s -vec %(vec)s -num %(num)d -w %(width)d -h %(height)d" % params
+        self.logger.info("running command: %s", cmd)
+        subprocess.call(cmd.strip().split(" "))
+
+    def create_negative_dat(self):
+        output_text = ""
+        self.logger.info("begin creating positive.dat")
+        for file_name in self.neg_img_files:
+
+            # skip hidden file
+            if file_name.startswith('.'):
+                continue
+
+            file_path = self.neg_img_dir + file_name
+            output_text += file_path
+            output_text += "\n"
+        # print output_text
+        self.logger.info("writing data to negative.dat")
+        f = open('negative.dat', 'w')
+        f.write(output_text)
+        f.close()
+        self.logger.info("completed writing data to positive.dat")
+
+    def opencv_train_cascade(self, feature_type='LBP'):
+        pos_size = len(self.pos_img_files)
+        neg_size = len(self.neg_img_files)
+
+        params = {
+            'data': self.out_dir,
+            'vec': 'positive.vec',
+            'bg': 'negative.dat',
+            'num_pos': pos_size * 0.8,
+            'num_neg': neg_size,
+            'feature_type': feature_type,
+            'max_false_alarm_rate': 0.4,
+            'width': 40,
+            'height': 40
+        }
+
+        cmd = " opencv_traincascade -data %(data)s -vec %(vec)s -bg %(bg)s -numPos %(num_pos)d -numNeg %(num_neg)d -featureType %(feature_type)s -maxFalseAlarmRate %(max_false_alarm_rate)d -w %(width)d -h %(height)d" % params
+
+        self.logger.info("running command: %s", cmd)
+        subprocess.call(cmd.strip().split(" "))
 if __name__ == '__main__':
 
     logging.root.setLevel(level=logging.INFO)
 
     inria = InriaPersonDataSet()
 
-    inria.draw_bounding_boxes_for_all()
+    # inria.draw_bounding_boxes_for_all()
+    #
+    # inria.create_crop_for_all()
 
-    inria.create_crop_for_all()
+    # inria.create_positive_dat()
+    # inria.create_negative_dat()
+    inria.opencv_train_cascade()
