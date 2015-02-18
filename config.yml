@@ -6,4 +6,4 @@ output:
     cropped_dir: ./INRIAPerson/Train/2015cropped/
     bounding_box_out_dir: ./INRIAPerson/Train/2015bounding_box/
     out_dir: ./INRIAPerson/Train/2015out/
-    cascade_xml: ./
+    cascade_xml: ./INRIAPerson/Train/2015hog/

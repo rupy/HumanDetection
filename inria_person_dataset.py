@@ -43,6 +43,8 @@ class InriaPersonDataSet:
             os.mkdir(self.bounding_box_out_dir)
         if not os.path.isdir(self.out_dir):
             os.mkdir(self.out_dir)
+        if not os.path.isdir(self.cascade_xml_dir):
+            os.mkdir(self.cascade_xml_dir)
 
         # set array of all file names
         self.pos_img_files = [file_name for file_name in os.listdir(self.pos_img_dir) if not file_name.startswith('.')]
@@ -228,15 +230,15 @@ class InriaPersonDataSet:
         f.close()
         self.logger.info("completed writing data to positive.dat")
 
-    def opencv_train_cascade(self, feature_type='LBP'):
+    def opencv_train_cascade(self, feature_type='HOG'):
         pos_size = len(self.pos_img_files)
         neg_size = len(self.neg_img_files)
 
         params = {
-            'data': self.out_dir,
+            'data': self.cascade_xml_dir,
             'vec': 'positive.vec',
             'bg': 'negative.dat',
-            'num_pos': pos_size * 0.8,
+            'num_pos': pos_size * 0.9,
             'num_neg': neg_size,
             'feature_type': feature_type,
             'max_false_alarm_rate': 0.4,
@@ -248,6 +250,70 @@ class InriaPersonDataSet:
 
         self.logger.info("running command: %s", cmd)
         subprocess.call(cmd.strip().split(" "))
+
+    def __inside(self, r, q):
+        rx, ry, rw, rh = r
+        qx, qy, qw, qh = q
+        return rx > qx and ry > qy and rx + rw < qx + qw and ry + rh < qy + qh
+
+
+    def __draw_detections(self, img, rects, thickness = 1):
+        for x, y, w, h in rects:
+            # the HOG detector returns slightly larger rectangles than the real objects.
+            # so we slightly shrink the rectangles to get a nicer output.
+            pad_w, pad_h = int(0.15*w), int(0.05*h)
+            cv2.rectangle(img, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
+
+    def detect(self, image_path, cascade_file='cascade.xml'):
+
+        # read image
+        self.logger.info("loading image file: " + image_path)
+        img = cv2.imread(image_path)
+        if img is None:
+            Exception("cannot load image file: " + image_path)
+
+        # read cascade file
+        cascade_path = self.cascade_xml_dir + cascade_file
+        self.logger.info("loading cascade file: " + cascade_path)
+        cascade = cv2.CascadeClassifier(cascade_path)
+        if cascade.empty():
+            Exception("cannot load cascade file: " + cascade_path)
+
+        # detection
+        self.logger.info("detecting")
+        found = cascade.detectMultiScale(img, 1.1, 3)
+        print found
+
+        # join detection areas
+        found_filtered = []
+        for ri, r in enumerate(found):
+            for qi, q in enumerate(found):
+                if ri != qi and self.__inside(r, q):
+                    break
+                else:
+                    found_filtered.append(r)
+
+        # draw detection areas
+        self.__draw_detections(img, found)
+        self.__draw_detections(img, found_filtered, 3)
+        print '%d (%d) found' % (len(found_filtered), len(found))
+
+        # show result
+        cv2.imshow('img', img)
+
+        # write file
+        cv2.imwrite('result_people_detect.png',img)
+
+        # wait key
+        ch = 0xFF & cv2.waitKey()
+        if ch == 27:
+            return
+        cv2.destroyAllWindows()
+
+    def detect_all(self):
+        for file in self.pos_img_files:
+            self.detect(self.pos_img_dir + file)
+
 if __name__ == '__main__':
 
     logging.root.setLevel(level=logging.INFO)
@@ -260,3 +326,6 @@ if __name__ == '__main__':
     # inria.create_positive_dat()
     # inria.create_negative_dat()
     # inria.opencv_train_cascade()
+
+    # inria.detect_all()
+    inria.detect('./INRIAPerson/Train/pos/crop001509.png')
