@@ -119,10 +119,6 @@ class InriaPersonDataSet:
         self.logger.info("begin drawing bounding boxes")
         for file_name in self.pos_img_files:
 
-            # skip hidden file
-            if file_name.startswith('.'):
-                continue
-
             # draw bounding box
             self.draw_bounding_boxes_and_write_file(file_name)
 
@@ -149,10 +145,6 @@ class InriaPersonDataSet:
         self.logger.info("begin creating crop image")
         for file_name in self.pos_img_files:
 
-            # skip hidden file
-            if file_name.startswith('.'):
-                continue
-
             # create crop
             self.create_crop_write_file(file_name)
 
@@ -178,10 +170,6 @@ class InriaPersonDataSet:
         output_text = ""
         self.logger.info("begin creating positive.dat")
         for file_name in self.pos_img_files:
-
-            # skip hidden file
-            if file_name.startswith('.'):
-                continue
 
             file_path = self.pos_img_dir + file_name
             annotation_info = self.parse_annotation_file(file_name)
@@ -215,10 +203,6 @@ class InriaPersonDataSet:
         output_text = ""
         self.logger.info("begin creating positive.dat")
         for file_name in self.neg_img_files:
-
-            # skip hidden file
-            if file_name.startswith('.'):
-                continue
 
             file_path = self.neg_img_dir + file_name
             output_text += file_path
