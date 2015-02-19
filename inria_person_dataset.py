@@ -38,18 +38,20 @@ class InriaPersonDataSet:
 
         # create output paths
         if not os.path.isdir(self.cropped_dir):
-            os.mkdir(self.cropped_dir)
+            os.makedirs(self.cropped_dir)
         if not os.path.isdir(self.bounding_box_out_dir):
-            os.mkdir(self.bounding_box_out_dir)
+            os.makedirs(self.bounding_box_out_dir)
         if not os.path.isdir(self.out_dir):
-            os.mkdir(self.out_dir)
+            os.makedirs(self.out_dir)
         if not os.path.isdir(self.cascade_xml_dir):
-            os.mkdir(self.cascade_xml_dir)
+            os.makedirs(self.cascade_xml_dir)
 
         # set array of all file names
         self.pos_img_files = [file_name for file_name in os.listdir(self.pos_img_dir) if not file_name.startswith('.')]
         self.neg_img_files = [file_name for file_name in os.listdir(self.neg_img_dir) if not file_name.startswith('.')]
         self.cropped_files = [file_name for file_name in os.listdir(self.cropped_dir) if not file_name.startswith('.')]
+
+        self.cascade = None
 
     def parse_annotation_file(self, img_file_name):
 
@@ -166,7 +168,7 @@ class InriaPersonDataSet:
             out_file_name = 'c_' + os.path.splitext(file_name)[0] + '_' + str(i) + '.' + os.path.splitext(file_name)[1]
             cv2.imwrite(self.cropped_dir + out_file_name, cropped_img)
 
-    def create_positive_dat(self):
+    def create_positive_dat(self, width=24, height=24):
         output_text = ""
         self.logger.info("begin creating positive.dat")
         for file_name in self.pos_img_files:
@@ -177,9 +179,9 @@ class InriaPersonDataSet:
             for object_info in annotation_info['object_list']:
                 x_min, y_min = object_info['bounding_box'][0]
                 x_max, y_max = object_info['bounding_box'][1]
-                width = x_max - x_min
-                height = y_max - y_min
-                output_text += "%d %d %d %d  " % (x_min, y_min, width, height)
+                w = x_max - x_min
+                h = y_max - y_min
+                output_text += "%d %d %d %d  " % (x_min, y_min, w, h)
             output_text += "\n"
         # print output_text
         self.logger.info("writing data to positive.dat")
@@ -192,8 +194,8 @@ class InriaPersonDataSet:
             'info': 'positive.dat',
             'vec': 'positive.vec',
             'num': len(self.pos_img_files),
-            'width': 40,
-            'height': 40
+            'width': width,
+            'height': height
         }
         cmd = "opencv_createsamples -info %(info)s -vec %(vec)s -num %(num)d -w %(width)d -h %(height)d" % params
         self.logger.info("running command: %s", cmd)
@@ -201,7 +203,7 @@ class InriaPersonDataSet:
 
     def create_negative_dat(self):
         output_text = ""
-        self.logger.info("begin creating positive.dat")
+        self.logger.info("begin creating negative.dat")
         for file_name in self.neg_img_files:
 
             file_path = self.neg_img_dir + file_name
@@ -212,9 +214,9 @@ class InriaPersonDataSet:
         f = open('negative.dat', 'w')
         f.write(output_text)
         f.close()
-        self.logger.info("completed writing data to positive.dat")
+        self.logger.info("completed writing data to negative.dat")
 
-    def opencv_train_cascade(self, feature_type='HOG'):
+    def opencv_train_cascade(self, feature_type='HOG', max_false_alarm_rate=0.4, width=24, height=24):
         pos_size = len(self.pos_img_files)
         neg_size = len(self.neg_img_files)
 
@@ -222,12 +224,12 @@ class InriaPersonDataSet:
             'data': self.cascade_xml_dir,
             'vec': 'positive.vec',
             'bg': 'negative.dat',
-            'num_pos': pos_size * 0.9,
+            'num_pos': pos_size * 0.8,
             'num_neg': neg_size,
             'feature_type': feature_type,
-            'max_false_alarm_rate': 0.4,
-            'width': 40,
-            'height': 40
+            'max_false_alarm_rate': max_false_alarm_rate,
+            'width': width,
+            'height': height
         }
 
         cmd = "opencv_traincascade -data %(data)s -vec %(vec)s -bg %(bg)s -numPos %(num_pos)d -numNeg %(num_neg)d -featureType %(feature_type)s -maxFalseAlarmRate %(max_false_alarm_rate)f -w %(width)d -h %(height)d" % params
@@ -248,7 +250,14 @@ class InriaPersonDataSet:
             pad_w, pad_h = int(0.15*w), int(0.05*h)
             cv2.rectangle(img, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
 
-    def detect(self, image_path, cascade_file='cascade.xml'):
+    def load_cascade_file(self, cascade_file='cascade.xml'):
+        cascade_path = self.cascade_xml_dir + cascade_file
+        self.logger.info("loading cascade file: " + cascade_path)
+        self.cascade = cv2.CascadeClassifier(cascade_path)
+        if self.cascade.empty():
+            Exception("cannot load cascade file: " + cascade_path)
+
+    def detect(self, image_path):
 
         # read image
         self.logger.info("loading image file: " + image_path)
@@ -256,16 +265,9 @@ class InriaPersonDataSet:
         if img is None:
             Exception("cannot load image file: " + image_path)
 
-        # read cascade file
-        cascade_path = self.cascade_xml_dir + cascade_file
-        self.logger.info("loading cascade file: " + cascade_path)
-        cascade = cv2.CascadeClassifier(cascade_path)
-        if cascade.empty():
-            Exception("cannot load cascade file: " + cascade_path)
-
         # detection
         self.logger.info("detecting")
-        found = cascade.detectMultiScale(img, 1.1, 3)
+        found = self.cascade.detectMultiScale(img, 1.1, 3)
         print found
 
         # join detection areas
@@ -283,10 +285,12 @@ class InriaPersonDataSet:
         print '%d (%d) found' % (len(found_filtered), len(found))
 
         # show result
-        cv2.imshow('img', img)
+        # cv2.imshow('img', img)
 
         # write file
-        cv2.imwrite('result_people_detect.png',img)
+        head, tail = os.path.split(image_path)
+        new_img_path = self.out_dir + tail + '.png'
+        cv2.imwrite(new_img_path, img)
 
         # wait key
         ch = 0xFF & cv2.waitKey()
@@ -307,9 +311,11 @@ if __name__ == '__main__':
     # inria.draw_bounding_boxes_for_all()
     #
     # inria.create_crop_for_all()
-    inria.create_positive_dat()
+    inria.create_positive_dat(40,40)
     inria.create_negative_dat()
-    inria.opencv_train_cascade()
+    inria.opencv_train_cascade('HOG', 0.4, 40, 40)
 
+    # inria.load_cascade_file()
     # inria.detect_all()
     # inria.detect('./INRIAPerson/Train/pos/crop001509.png')
+#
