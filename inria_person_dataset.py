@@ -230,7 +230,7 @@ class InriaPersonDataSet:
             'height': 40
         }
 
-        cmd = "opencv_traincascade -data %(data)s -vec %(vec)s -bg %(bg)s -numPos %(num_pos)d -numNeg %(num_neg)d -featureType %(feature_type)s -maxFalseAlarmRate %(max_false_alarm_rate)d -w %(width)d -h %(height)d" % params
+        cmd = "opencv_traincascade -data %(data)s -vec %(vec)s -bg %(bg)s -numPos %(num_pos)d -numNeg %(num_neg)d -featureType %(feature_type)s -maxFalseAlarmRate %(max_false_alarm_rate)f -w %(width)d -h %(height)d" % params
 
         self.logger.info("running command: %s", cmd)
         subprocess.call(cmd.strip().split(" "))
@@ -307,9 +307,9 @@ if __name__ == '__main__':
     # inria.draw_bounding_boxes_for_all()
     #
     # inria.create_crop_for_all()
-    # inria.create_positive_dat()
-    # inria.create_negative_dat()
-    # inria.opencv_train_cascade()
+    inria.create_positive_dat()
+    inria.create_negative_dat()
+    inria.opencv_train_cascade()
 
     # inria.detect_all()
-    inria.detect('./INRIAPerson/Train/pos/crop001509.png')
+    # inria.detect('./INRIAPerson/Train/pos/crop001509.png')
