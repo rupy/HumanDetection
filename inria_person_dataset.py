@@ -21,6 +21,20 @@ class InriaPersonDataSet(ImageDataSet):
         # set dataset path
         self.annotation_dir = self.config['dataset']['annotation_dir']
 
+        # set output path
+        self.cropped_dir = self.config['output']['cropped_dir']
+        self.bounding_box_out_dir = self.config['output']['bounding_box_out_dir']
+
+        # create output paths
+        if not os.path.isdir(self.cropped_dir):
+            os.makedirs(self.cropped_dir)
+        if not os.path.isdir(self.bounding_box_out_dir):
+            os.makedirs(self.bounding_box_out_dir)
+
+        # set array of all file names
+        self.cropped_files = [file_name for file_name in os.listdir(self.cropped_dir) if not file_name.startswith('.')]
+        self.cropped_files.sort()
+
     def parse_annotation_file(self, img_file_name):
 
         # image annotation path

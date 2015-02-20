@@ -30,16 +30,10 @@ class ImageDataSet:
         self.neg_img_dir = self.config['dataset']['neg_img_dir']
 
         # set output path
-        self.cropped_dir = self.config['output']['cropped_dir']
-        self.bounding_box_out_dir = self.config['output']['bounding_box_out_dir']
         self.out_dir = self.config['output']['out_dir']
         self.cascade_xml_dir = self.config['output']['cascade_xml_dir']
 
         # create output paths
-        if not os.path.isdir(self.cropped_dir):
-            os.makedirs(self.cropped_dir)
-        if not os.path.isdir(self.bounding_box_out_dir):
-            os.makedirs(self.bounding_box_out_dir)
         if not os.path.isdir(self.out_dir):
             os.makedirs(self.out_dir)
         if not os.path.isdir(self.cascade_xml_dir):
@@ -50,8 +44,6 @@ class ImageDataSet:
         self.pos_img_files.sort()
         self.neg_img_files = [file_name for file_name in os.listdir(self.neg_img_dir) if not file_name.startswith('.')]
         self.neg_img_files.sort()
-        self.cropped_files = [file_name for file_name in os.listdir(self.cropped_dir) if not file_name.startswith('.')]
-        self.cropped_files.sort()
 
         self.cascade = None
 
