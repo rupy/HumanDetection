@@ -18,11 +18,6 @@ class InriaPersonDataSet(ImageDataSet):
 
         ImageDataSet.__init__(self)
 
-        # log setting
-        program = os.path.basename(sys.argv[0])
-        self.logger = logging.getLogger(program)
-        logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s')
-
         # set dataset path
         self.annotation_dir = self.config['dataset']['annotation_dir']
 

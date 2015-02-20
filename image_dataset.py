@@ -46,9 +46,12 @@ class ImageDataSet:
             os.makedirs(self.cascade_xml_dir)
 
         # set array of all file names
-        self.cropped_files = [file_name for file_name in os.listdir(self.cropped_dir) if not file_name.startswith('.')]        # set array of all file names
         self.pos_img_files = [file_name for file_name in os.listdir(self.pos_img_dir) if not file_name.startswith('.')]
+        self.pos_img_files.sort()
         self.neg_img_files = [file_name for file_name in os.listdir(self.neg_img_dir) if not file_name.startswith('.')]
+        self.neg_img_files.sort()
+        self.cropped_files = [file_name for file_name in os.listdir(self.cropped_dir) if not file_name.startswith('.')]
+        self.cropped_files.sort()
 
         self.cascade = None
 
@@ -58,15 +61,9 @@ class ImageDataSet:
         for file_name in self.pos_img_files:
 
             file_path = self.pos_img_dir + file_name
-            annotation_info = self.parse_annotation_file(file_name)
-            output_text += "%s  %d  " % (file_path, annotation_info['ground_truth'])
-            for object_info in annotation_info['object_list']:
-                x_min, y_min = object_info['bounding_box'][0]
-                x_max, y_max = object_info['bounding_box'][1]
-                w = x_max - x_min
-                h = y_max - y_min
-                output_text += "%d %d %d %d  " % (x_min, y_min, w, h)
-            output_text += "\n"
+            im = cv2.imread(file_path)
+            output_text += "%s  %d  " % (file_path, 1)
+            output_text += "%d %d %d %d  \n" % (0, 0, im.shape[0], im.shape[1])
         # print output_text
         self.logger.info("writing data to positive.dat")
         f = open('positive.dat', 'w')
