@@ -28,6 +28,7 @@ class ImageDataSet:
         # set dataset path
         self.pos_img_dir = self.config['dataset']['pos_img_dir']
         self.neg_img_dir = self.config['dataset']['neg_img_dir']
+        self.test_img_dir = self.config['dataset']['test_img_dir']
 
         # set output path
         self.out_dir = self.config['output']['out_dir']
@@ -44,6 +45,8 @@ class ImageDataSet:
         self.pos_img_files.sort()
         self.neg_img_files = [file_name for file_name in os.listdir(self.neg_img_dir) if not file_name.startswith('.')]
         self.neg_img_files.sort()
+        self.test_img_files = [file_name for file_name in os.listdir(self.test_img_dir) if not file_name.startswith('.')]
+        self.test_img_files.sort()
 
         self.cascade = None
 
@@ -177,5 +180,19 @@ class ImageDataSet:
         cv2.destroyAllWindows()
 
     def detect_all(self):
-        for file in self.pos_img_files:
-            self.detect(self.pos_img_dir + file)
+        for file in self.test_img_files:
+            self.detect(self.test_img_dir + file)
+
+if __name__ == '__main__':
+
+    logging.root.setLevel(level=logging.INFO)
+
+    dataset = ImageDataSet()
+
+    # dataset.create_samples(24, 24)
+    # dataset.train_cascade('HOG', 0.4, 24, 24)
+
+    dataset.load_cascade_file()
+    dataset.detect_all()
+    # dataset.detect('./INRIAPerson/Train/pos/crop001509.png')
+#

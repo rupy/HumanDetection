@@ -2,8 +2,11 @@ dataset:
     pos_img_dir: ./INRIAPerson/Train/pos/
     neg_img_dir: ./INRIAPerson/Train/neg/
     annotation_dir: ./INRIAPerson/Train/annotations/
+    test_img_dir: ./INRIAPerson/Test/pos/
 output:
     cropped_dir: ./output/cropped/
     bounding_box_out_dir: ./output/bounding_box/
     out_dir: ./output/out/
     cascade_xml_dir: ./output/hog3/
+    my_annotation_dir: /output/my_annotation/
+    my_annotation_img_dir: /output/my_annotation_img/
