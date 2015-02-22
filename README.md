@@ -25,7 +25,7 @@ You can create region information of objects to be detected. To use this class, 
 - my_annotation_dir: Directory to save annotation infomations as pickle file. This directory is automatically created.
 - my_annotation_img_dir: Directory to save sample annotated images. This directory is automatically created.
 
-### code
+### simple code
 
 ```python
 # log level setting
@@ -35,10 +35,18 @@ logging.root.setLevel(level=logging.INFO)
 generator = AnnotationGenerator()
 
 # generate annotations by GUI
-# if given False, generator skips file you already added annotations.
-# if given True, you can edit file you alreadt added annotations.
-generator.generate_annotations(False)
+# if given True, generator skips file you already added annotations(default).
+# if given False, you can edit file you already added annotations.
+generator.generate_annotations(True)
 
 # create positive.dat for opencv
 generator.create_positive_dat()
 ```
+### how to annotate
+
+You can drag point to point in image to create regions. You can use keys as follow:
+- [d] key: Delete a region added last.
+- [space] key: Save regions as pickle & go to next image
+- [q] key: Quit annotation work
+
+You can quit annotation work. You can start from the image you quit brefore if you give True to generate_annotations().
