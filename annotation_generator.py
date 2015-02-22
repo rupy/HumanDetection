@@ -59,6 +59,9 @@ class AnnotationGenerator:
 
     def on_mouse(self, event, x, y, flags, param):
 
+        x = min(max(x, 0), self.im_orig.shape[1] - 1)
+        y = min(max(y, 0), self.im_orig.shape[0] - 1)
+
         if event == cv2.EVENT_LBUTTONDOWN:
             self.logger.info('DOWN: %d, %d', x, y)
             self.start_pt = (x, y)
@@ -109,7 +112,7 @@ class AnnotationGenerator:
             if key == ord('q'): # 'q' key
                 cv2.destroyAllWindows()
                 return False
-            elif key == 32: # sapce key
+            elif key == 32: # space key
                 self.logger.info('saving annotation data: %s', annotation_path)
                 f = open(annotation_path, 'wb')
                 pickle.dump(self.bboxes, f)
@@ -123,6 +126,7 @@ class AnnotationGenerator:
                     self.bboxes.pop()
                 else:
                    self.logger.info('no bounding boxes to delete')
+        return True
 
     def generate_annotations(self, skip=True):
 
@@ -172,9 +176,16 @@ class AnnotationGenerator:
 
 if __name__ == '__main__':
 
+    # log level setting
     logging.root.setLevel(level=logging.INFO)
 
+    # generate AnnotationGenerator
     generator = AnnotationGenerator()
-    generator.generate_annotations(False)
-    generator.create_positive_dat()
 
+    # generate annotations by GUI
+    # if given True, generator skips file you already added annotations(default).
+    # if given False, you can edit file you already added annotations.
+    generator.generate_annotations(True)
+
+    # create positive.dat for opencv
+    generator.create_positive_dat()
