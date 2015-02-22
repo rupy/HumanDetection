@@ -27,14 +27,18 @@ You can create region information of objects to be detected. To use this class, 
 
 ### simple code
 
+You can write code as follow:
+
 ```python
+from annotation_generator import AnnotationGenerator
+
 # log level setting
 logging.root.setLevel(level=logging.INFO)
 
-# generate AnnotationGenerator
+# initialize AnnotationGenerator
 generator = AnnotationGenerator()
 
-# generate annotations by GUI
+# Do annotation work by GUI
 # if given True, generator skips file you already added annotations(default).
 # if given False, you can edit file you already added annotations.
 generator.generate_annotations(True)
@@ -42,11 +46,17 @@ generator.generate_annotations(True)
 # create positive.dat for opencv
 generator.create_positive_dat()
 ```
+
+or you can just run python like this:
+
+```Shell
+$ python annotation_generator.py
+```
 ### how to annotate
 
 You can drag point to point in image to create regions. You can use keys as follow:
 - [d] key: Delete a region added last.
-- [space] key: Save regions as pickle & go to next image
-- [q] key: Quit annotation work
+- [space] key: Save regions as pickle & go to next image.
+- [q] key: Quit annotation work.
 
 You can quit annotation work. You can start from the image you quit brefore if you give True to generate_annotations().
