@@ -20,6 +20,8 @@ Edit configure file, config.yml for your own file system. output directories are
 ### Overview and configuration
 
 Annotation Generator is a GUI tool to generate annotation information for each image to learn dataset by opencv_traincascade.
+You don't need to use this class if you use Inria Person Dataset because it has annotation information in it. This program is for the dataset which has no annotation informations. 
+
 You can create region information of objects to be detected. To use this class, you have to change config.yml for your own file system as follow:
 - pos_img_dir: Directory contains images to add annotations.
 - my_annotation_dir: Directory to save annotation infomations as pickle file. This directory is automatically created.
