@@ -65,4 +65,4 @@ You can quit annotation work anytime. You can start from the image you quit bref
 
 ## InriaPersonDataSet
 
-## ImageDataSet class
+## ImageDataSet
