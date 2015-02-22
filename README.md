@@ -16,7 +16,7 @@ edit configure file: config.yml
 ## AnnotationGenerator
 
 Annotation Generator is a GUI tool to generate annotation information for each image to learn dataset by opencv_traincascade.
-You can create region information of objects to be detected.
-raw_img_dir in config.yml is the directory contains images to add annotations.
-my_annotation_dir in config.yml is the directory to save annotation infomations as pickle file.
-my_annotation_img_dir in config.yml is the directory to save sample annotated images.
+You can create region information of objects to be detected. To use this class, you have to change config.yml for your own file system as follow:
+- pos_img_dir: the directory contains images to add annotations.
+- my_annotation_dir: the directory to save annotation infomations as pickle file.
+- my_annotation_img_dir: the directory to save sample annotated images.
