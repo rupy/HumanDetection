@@ -1,7 +1,7 @@
 # HumanDetection
 Human detection program for Inria Person Dataset
 
-# installation
+# Installation
 
 Download by git
 
@@ -11,13 +11,13 @@ git clone https://github.com/rupy/HumanDetection.git
 
 or you can download as zip file from https://github.com/rupy/HumanDetection/archive/master.zip.
 
-Edit configure file, config.yml for your own file system. output directories are automatically created by program.
+Edit configure file, config.yml for your own file system. output directories are automatically created by program. Inria Person Dataset is in http://pascal.inrialpes.fr/data/human/.
 
 # Usage
 
 ## AnnotationGenerator
 
-### overview and configuration
+### Overview and configuration
 
 Annotation Generator is a GUI tool to generate annotation information for each image to learn dataset by opencv_traincascade.
 You can create region information of objects to be detected. To use this class, you have to change config.yml for your own file system as follow:
@@ -25,7 +25,7 @@ You can create region information of objects to be detected. To use this class, 
 - my_annotation_dir: Directory to save annotation infomations as pickle file. This directory is automatically created.
 - my_annotation_img_dir: Directory to save sample annotated images. This directory is automatically created.
 
-### simple code
+### Simple code
 
 Write code as follow:
 
@@ -52,7 +52,7 @@ or just run python like this:
 ```Shell
 $ python annotation_generator.py
 ```
-### how to annotate
+### How to annotate
 
 Drag point to point in image to create regions. You can use keys as follow:
 - [d] key: Delete a region added last.
@@ -60,3 +60,7 @@ Drag point to point in image to create regions. You can use keys as follow:
 - [q] key: Quit annotation work.
 
 You can quit annotation work anytime. You can start from the image you quit brefore if you give True to generate_annotations().
+
+## InriaPersonDataSet
+
+## ImageDataSet class
