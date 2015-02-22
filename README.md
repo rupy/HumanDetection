@@ -9,7 +9,9 @@ Download by git
 git clone https://github.com/rupy/HumanDetection.git
 ```
 
-edit configure file: config.yml
+or you can download as zip file from https://github.com/rupy/HumanDetection/archive/master.zip.
+
+Edit configure file, config.yml for your own file system.
 
 # Usage
 
