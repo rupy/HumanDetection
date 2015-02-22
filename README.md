@@ -59,4 +59,4 @@ You can drag point to point in image to create regions. You can use keys as foll
 - [space] key: Save regions as pickle & go to next image.
 - [q] key: Quit annotation work.
 
-You can quit annotation work. You can start from the image you quit brefore if you give True to generate_annotations().
+You can quit annotation work anytime. You can start from the image you quit brefore if you give True to generate_annotations().
