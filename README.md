@@ -27,7 +27,7 @@ You can create region information of objects to be detected. To use this class, 
 
 ### simple code
 
-You can write code as follow:
+Write code as follow:
 
 ```python
 from annotation_generator import AnnotationGenerator
@@ -47,14 +47,14 @@ generator.generate_annotations(True)
 generator.create_positive_dat()
 ```
 
-or you can just run python like this:
+or just run python like this:
 
 ```Shell
 $ python annotation_generator.py
 ```
 ### how to annotate
 
-You can drag point to point in image to create regions. You can use keys as follow:
+Drag point to point in image to create regions. You can use keys as follow:
 - [d] key: Delete a region added last.
 - [space] key: Save regions as pickle & go to next image.
 - [q] key: Quit annotation work.
