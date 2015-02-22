@@ -21,7 +21,7 @@ OpenCV 2.4.9
 Numpy 1.9.1
 PyYAML 3.11
 ```
-If you don't have Numpy and PyYAML, you can install by pip like:
+If you don't have Numpy and PyYAML, you can install these by pip like:
 
 ```Shell
 $ pip install numpy
