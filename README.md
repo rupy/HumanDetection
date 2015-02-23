@@ -101,7 +101,7 @@ You can create region information of objects to be detected. To use this class, 
 Write code as follow:
 
 ```python
-from annotation_generator import AnnotationGenerator
+from annotation_gui import AnnotationGUI
 
 # log level setting
 logging.root.setLevel(level=logging.INFO)
