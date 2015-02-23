@@ -13,7 +13,7 @@ import yaml
 
 class AnnotationGUI(QtGui.QWidget):
 
-    CONFIG_YAML = 'config.yml'
+    CONFIG_YAML = 'annotation_config.yml'
 
     def __init__(self):
 
@@ -167,12 +167,6 @@ class AnnotationGUI(QtGui.QWidget):
                     # print "Drag end (%d, %d)" % pt
                     self.__update_image_label()
                 self.box_num_label.setText("box num: %d" % len(self.bboxes))
-
-        if event.type() == QtCore.QEvent.KeyPress:
-            if event.matches(QtCore.QKeySequence.Save):
-                print "save"
-            else:
-                print "savingaa"
 
         return QtGui.QWidget.eventFilter(self, source, event)
 
