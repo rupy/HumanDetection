@@ -23,7 +23,7 @@ class AnnotationGUI(QtGui.QWidget):
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s')
 
         super(AnnotationGUI, self).__init__()
-        self.setWindowTitle('ImageViewer')
+        self.setWindowTitle('Annotation Tool')
 
         # load config file
         f = open(self.CONFIG_YAML, 'r')
@@ -55,45 +55,43 @@ class AnnotationGUI(QtGui.QWidget):
         self.end_pt = None
         self.bboxes = []
 
-        self.__initUI()
+        self.__init_ui()
 
 
-    def __initUI(self):
+    def __init_ui(self):
         self.image_label = QtGui.QLabel(self)
         self.image_label.setBackgroundRole(QtGui.QPalette.Base)
         self.image_label.installEventFilter(self)
-        self.image_label.setStyleSheet("border: 2px solid")
+        # self.image_label.setStyleSheet("border: 2px solid")
 
         self.filename_label = QtGui.QLabel()
 
         self.save_button = QtGui.QPushButton('save', self)
         self.save_button.clicked.connect(self.save)
+
         self.undo_button = QtGui.QPushButton('undo', self)
         self.undo_button.clicked.connect(self.remove_box)
 
         self.list_widget = QtGui.QListWidget(self)
-        # self.list_widget.addItems(['itemA', 'itemB', 'itemC'])
         self.list_widget.itemSelectionChanged.connect(self.open)
 
-        self.list_widget.setGeometry(10,10,100,200)
-        self.image_label.move(120,10)
-        self.save_button.setGeometry(10,210,100,50)
-        self.undo_button.setGeometry(10,260,100,50)
-        # self.layout = QtGui.QHBoxLayout()
-        # self.layout.addWidget(self.list_widget)
-        # self.layout.addWidget(self.image_label)
-        # self.layout.addWidget(self.filename_label)
-        # self.layout.addWidget(self.save_button)
-        # self.setLayout(self.layout)
-        # self.resize(300, 300)
+        self.list_widget.setGeometry(10,10,200,200)
+        self.image_label.move(220,10)
+        self.save_button.setGeometry(10,220,100,40)
+        self.undo_button.setGeometry(10,260,100,40)
 
-        self.set_image_paths(self.pos_img_files)
+        self.set_image_paths()
         self.list_widget.setCurrentRow(0)
 
-    def set_image_paths(self, path_list):
-        self.list_widget.clear()
-        self.list_widget.addItems(path_list)
+    def set_image_paths(self):
 
+        self.list_widget.clear()
+        self.list_widget.addItems(self.pos_img_files)
+        for i, is_made in enumerate([file + '.pkl' in self.my_annotation_files for file in self.pos_img_files]):
+            if is_made:
+                self.list_widget.item(i).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogYesButton))
+            else:
+                self.list_widget.item(i).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogNoButton))
 
     def load_bbox(self, img_path):
         if os.path.basename(img_path) in [os.path.splitext(annotation_file)[0] for annotation_file in self.my_annotation_files]:
@@ -109,7 +107,8 @@ class AnnotationGUI(QtGui.QWidget):
         self.image_label.adjustSize()
         self.filename_label.setText(os.path.basename(img_path))
         self.adjustSize()
-    def getCurrentItemText(self):
+
+    def get_current_item_text(self):
         return self.list_widget.currentItem().text()
 
     def eventFilter(self, source, event):
@@ -120,7 +119,7 @@ class AnnotationGUI(QtGui.QWidget):
                 y = min(max(pos.y(), 0), self.cv_img.shape[0] - 1)
                 pt = (x, y)
                 self.start_pt = pt
-                print "Drag start (%d, %d)" % pt
+                # print "Drag start (%d, %d)" % pt
         if event.type() == QtCore.QEvent.MouseMove and source is self.image_label:
             if event.buttons() & QtCore.Qt.LeftButton: # use buttons() instead of button()
                 pos = event.pos()
@@ -128,7 +127,7 @@ class AnnotationGUI(QtGui.QWidget):
                 y = min(max(pos.y(), 0), self.cv_img.shape[0] - 1)
                 pt = (x, y)
                 self.end_pt = pt
-                print "Dragging (%d, %d)" % pt
+                # print "Dragging (%d, %d)" % pt
                 self.update_image_label()
         if event.type() == QtCore.QEvent.MouseButtonRelease and source is self.image_label:
             if event.button() == QtCore.Qt.LeftButton:
@@ -140,7 +139,7 @@ class AnnotationGUI(QtGui.QWidget):
                     self.end_pt = pt
                     self.bboxes.append((self.start_pt, self.end_pt))
                     self.start_pt = self.end_pt = None
-                    print "Drag end (%d, %d)" % pt
+                    # print "Drag end (%d, %d)" % pt
                     self.update_image_label()
         return QtGui.QWidget.eventFilter(self, source, event)
 
@@ -193,6 +192,7 @@ class AnnotationGUI(QtGui.QWidget):
         head, tail = os.path.split(img_path)
         # root, ext = os.path.splitext(tail)
         annotation_path = self.my_annotation_dir + tail + '.pkl'
+        self.logger.info('loading annotation file: %s', annotation_path)
 
         f = open(annotation_path, 'rb')
         self.bboxes = pickle.load(f)
@@ -211,12 +211,9 @@ class AnnotationGUI(QtGui.QWidget):
     def open(self):
         idx = self.list_widget.currentRow()
         img_path = self.pos_img_dir + self.pos_img_files[idx]
+        self.logger.info('loading image file: %s', img_path)
         self.load_bbox(img_path)
         self.set_image_label(img_path)
-        # path, type = QtGui.QFileDialog.getOpenFileName(self, "Open File")
-        # image = QtGui.QImage(path)
-        # self.image_label.setPixmap(QtGui.QPixmap.fromImage(image))
-        # self.filename_label.setText(os.path.basename(path))
 
 if __name__ == '__main__':
     import sys
