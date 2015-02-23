@@ -20,6 +20,7 @@ Python 2.7
 OpenCV 2.4.9
 Numpy 1.9.1
 PyYAML 3.11
+PySide 1.2.2
 ```
 If you don't have Numpy and PyYAML, you can install these by pip like:
 
