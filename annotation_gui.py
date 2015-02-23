@@ -59,12 +59,13 @@ class AnnotationGUI(QtGui.QWidget):
 
 
     def __init_ui(self):
+
         self.image_label = QtGui.QLabel(self)
         self.image_label.setBackgroundRole(QtGui.QPalette.Base)
         self.image_label.installEventFilter(self)
-        # self.image_label.setStyleSheet("border: 2px solid")
 
-        self.filename_label = QtGui.QLabel()
+        self.filename_label = QtGui.QLabel(self)
+        self.filename_label.setText("a")
 
         self.save_button = QtGui.QPushButton('save', self)
         self.save_button.clicked.connect(self.save)
@@ -72,18 +73,25 @@ class AnnotationGUI(QtGui.QWidget):
         self.undo_button = QtGui.QPushButton('undo', self)
         self.undo_button.clicked.connect(self.remove_box)
 
+        self.count_button = QtGui.QPushButton('count all boxes', self)
+        self.count_button.clicked.connect(self.count_all_bbox)
+
         self.list_widget = QtGui.QListWidget(self)
         self.list_widget.itemSelectionChanged.connect(self.open)
 
-        self.list_widget.setGeometry(10,10,200,200)
-        self.image_label.move(220,10)
-        self.save_button.setGeometry(10,220,100,40)
-        self.undo_button.setGeometry(10,260,100,40)
+        self.box_num_label = QtGui.QLabel(self)
 
-        self.set_image_paths()
-        self.list_widget.setCurrentRow(0)
+        self.list_widget.setGeometry(10, 10, 200, 200)
+        self.image_label.move(220, 10)
+        self.save_button.move(10, 220)
+        self.undo_button.move(100, 220)
+        self.count_button.move(10, 250)
+        self.filename_label.move(10, 280)
+        self.box_num_label.move(10, 310)
 
-    def set_image_paths(self):
+        self.__init_list_widget()
+
+    def __init_list_widget(self):
 
         self.list_widget.clear()
         self.list_widget.addItems(self.pos_img_files)
@@ -92,6 +100,19 @@ class AnnotationGUI(QtGui.QWidget):
                 self.list_widget.item(i).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogYesButton))
             else:
                 self.list_widget.item(i).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogNoButton))
+        self.list_widget.setCurrentRow(0)
+
+    def count_all_bbox(self):
+        c = 0
+        for annotation_file in self.my_annotation_files:
+            annotation_path = self.my_annotation_dir + annotation_file
+            f = open(annotation_path, 'rb')
+            bboxes = pickle.load(f)
+            f.close()
+            c += len(bboxes)
+        msgBox = QtGui.QMessageBox()
+        msgBox.setText("all boxes count: %d" % c)
+        msgBox.exec_()
 
     def load_bbox(self, img_path):
         if os.path.basename(img_path) in [os.path.splitext(annotation_file)[0] for annotation_file in self.my_annotation_files]:
@@ -99,14 +120,14 @@ class AnnotationGUI(QtGui.QWidget):
         else:
             self.bboxes = []
 
-    def set_image_label(self, img_path):
+    def load_image(self, img_path):
         self.cv_img = cv2.imread(img_path)
         self.cv_bbox_img = self.draw_dragging_area(self.cv_img)
         qt_img = self.convert_cv_img2qt_img(self.cv_bbox_img)
         self.image_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
         self.image_label.adjustSize()
         self.filename_label.setText(os.path.basename(img_path))
-        self.adjustSize()
+        self.box_num_label.setText("box num: %d" % len(self.bboxes))
 
     def get_current_item_text(self):
         return self.list_widget.currentItem().text()
@@ -141,6 +162,8 @@ class AnnotationGUI(QtGui.QWidget):
                     self.start_pt = self.end_pt = None
                     # print "Drag end (%d, %d)" % pt
                     self.update_image_label()
+                self.box_num_label.setText("box num: %d" % len(self.bboxes))
+
         return QtGui.QWidget.eventFilter(self, source, event)
 
     def draw_dragging_area(self, im_orig):
@@ -206,14 +229,14 @@ class AnnotationGUI(QtGui.QWidget):
             print self.bboxes
         else:
             self.logger.info('no bounding boxes to delete')
-        self.set_image_label(img_path)
+        self.load_image(img_path)
 
     def open(self):
         idx = self.list_widget.currentRow()
         img_path = self.pos_img_dir + self.pos_img_files[idx]
         self.logger.info('loading image file: %s', img_path)
         self.load_bbox(img_path)
-        self.set_image_label(img_path)
+        self.load_image(img_path)
 
 if __name__ == '__main__':
     import sys
