@@ -68,16 +68,16 @@ class AnnotationGUI(QtGui.QWidget):
         self.filename_label.setText("a")
 
         self.save_button = QtGui.QPushButton('save', self)
-        self.save_button.clicked.connect(self.save)
+        self.save_button.clicked.connect(self.__save)
 
         self.undo_button = QtGui.QPushButton('undo', self)
-        self.undo_button.clicked.connect(self.remove_box)
+        self.undo_button.clicked.connect(self.__remove_box)
 
         self.count_button = QtGui.QPushButton('count all boxes', self)
         self.count_button.clicked.connect(self.count_all_bbox)
 
         self.list_widget = QtGui.QListWidget(self)
-        self.list_widget.itemSelectionChanged.connect(self.open)
+        self.list_widget.itemSelectionChanged.connect(self.__open)
 
         self.box_num_label = QtGui.QLabel(self)
 
@@ -102,6 +102,10 @@ class AnnotationGUI(QtGui.QWidget):
                 self.list_widget.item(i).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogNoButton))
         self.list_widget.setCurrentRow(0)
 
+    def __change_current_icon_yes(self):
+        idx = self.list_widget.currentRow()
+        self.list_widget.item(idx).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogYesButton))
+
     def count_all_bbox(self):
         c = 0
         for annotation_file in self.my_annotation_files:
@@ -114,25 +118,23 @@ class AnnotationGUI(QtGui.QWidget):
         msgBox.setText("all boxes count: %d" % c)
         msgBox.exec_()
 
-    def load_bbox(self, img_path):
+    def __load_bbox(self, img_path):
         if os.path.basename(img_path) in [os.path.splitext(annotation_file)[0] for annotation_file in self.my_annotation_files]:
-            self.load(img_path)
+            self.__load(img_path)
         else:
             self.bboxes = []
 
-    def load_image(self, img_path):
+    def __load_image(self, img_path):
         self.cv_img = cv2.imread(img_path)
-        self.cv_bbox_img = self.draw_dragging_area(self.cv_img)
-        qt_img = self.convert_cv_img2qt_img(self.cv_bbox_img)
+        self.cv_bbox_img = self.__draw_dragging_area(self.cv_img)
+        qt_img = self.__convert_cv_img2qt_img(self.cv_bbox_img)
         self.image_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
         self.image_label.adjustSize()
         self.filename_label.setText(os.path.basename(img_path))
         self.box_num_label.setText("box num: %d" % len(self.bboxes))
 
-    def get_current_item_text(self):
-        return self.list_widget.currentItem().text()
-
     def eventFilter(self, source, event):
+        # drag start
         if event.type() == QtCore.QEvent.MouseButtonPress and source is self.image_label:
             if event.button() == QtCore.Qt.LeftButton:
                 pos = event.pos()
@@ -141,6 +143,7 @@ class AnnotationGUI(QtGui.QWidget):
                 pt = (x, y)
                 self.start_pt = pt
                 # print "Drag start (%d, %d)" % pt
+        # dragging
         if event.type() == QtCore.QEvent.MouseMove and source is self.image_label:
             if event.buttons() & QtCore.Qt.LeftButton: # use buttons() instead of button()
                 pos = event.pos()
@@ -149,7 +152,8 @@ class AnnotationGUI(QtGui.QWidget):
                 pt = (x, y)
                 self.end_pt = pt
                 # print "Dragging (%d, %d)" % pt
-                self.update_image_label()
+                self.__update_image_label()
+        # drag end
         if event.type() == QtCore.QEvent.MouseButtonRelease and source is self.image_label:
             if event.button() == QtCore.Qt.LeftButton:
                 if self.start_pt is not None:
@@ -161,12 +165,18 @@ class AnnotationGUI(QtGui.QWidget):
                     self.bboxes.append((self.start_pt, self.end_pt))
                     self.start_pt = self.end_pt = None
                     # print "Drag end (%d, %d)" % pt
-                    self.update_image_label()
+                    self.__update_image_label()
                 self.box_num_label.setText("box num: %d" % len(self.bboxes))
+
+        if event.type() == QtCore.QEvent.KeyPress:
+            if event.matches(QtCore.QKeySequence.Save):
+                print "save"
+            else:
+                print "savingaa"
 
         return QtGui.QWidget.eventFilter(self, source, event)
 
-    def draw_dragging_area(self, im_orig):
+    def __draw_dragging_area(self, im_orig):
         im_copy = im_orig.copy()
         # draw rectangles
         if self.start_pt is not None and self.end_pt is not None:
@@ -175,68 +185,83 @@ class AnnotationGUI(QtGui.QWidget):
             cv2.rectangle(im_copy, box[0], box[1], (0, 255, 0), 1)
         return im_copy
 
-    def update_image_label(self):
+    def __update_image_label(self):
         if self.cv_img is not None:
-            self.cv_bbox_img = self.draw_dragging_area(self.cv_img)
-            qt_img = self.convert_cv_img2qt_img(self.cv_bbox_img)
+            self.cv_bbox_img = self.__draw_dragging_area(self.cv_img)
+            qt_img = self.__convert_cv_img2qt_img(self.cv_bbox_img)
             self.image_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
 
-    def convert_cv_img2qt_img(self, cv_img):
+    def __convert_cv_img2qt_img(self, cv_img):
         height, width, dim = self.cv_img.shape
         bytes_per_line = dim * width
         qt_img = QtGui.QImage(cv_img.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
         qt_img_rgb = qt_img.rgbSwapped()
         return qt_img_rgb
 
-    def save(self):
+    def __save(self):
 
         idx = self.list_widget.currentRow()
         img_path = self.pos_img_dir + self.pos_img_files[idx]
         # annotation path
-        head, tail = os.path.split(img_path)
-        # root, ext = os.path.splitext(tail)
-        annotation_path = self.my_annotation_dir + tail + '.pkl'
+        base = os.path.basename(img_path)
+        annotation_path = self.my_annotation_dir + base + '.pkl'
 
         # bbox path
-        bbox_path = self.my_annotation_img_dir + 'bbox_' + tail
+        bbox_path = self.my_annotation_img_dir + 'bbox_' + base
 
+        # save
         self.logger.info('saving annotation data: %s', annotation_path)
         f = open(annotation_path, 'wb')
         pickle.dump(self.bboxes, f)
         f.close()
         self.logger.info('saving bounding box data: %s', bbox_path)
         cv2.imwrite(bbox_path, self.cv_bbox_img)
-        self.bboxes = []
+
+        # reload annotation files
         self.my_annotation_files = [file_name for file_name in os.listdir(self.my_annotation_dir) if not file_name.startswith('.')]
         self.my_annotation_files.sort()
 
-    def load(self, img_path):
+        # change list widget
+        self.__change_current_icon_yes()
+
+        # show msg box
+        msgBox = QtGui.QMessageBox()
+        msgBox.setText("saved")
+        msgBox.exec_()
+
+    def __load(self, img_path):
         # annotation path
-        head, tail = os.path.split(img_path)
-        # root, ext = os.path.splitext(tail)
-        annotation_path = self.my_annotation_dir + tail + '.pkl'
+        base = os.path.basename(img_path)
+        annotation_path = self.my_annotation_dir + base + '.pkl'
         self.logger.info('loading annotation file: %s', annotation_path)
 
+        # load pickle
         f = open(annotation_path, 'rb')
         self.bboxes = pickle.load(f)
         f.close()
 
-    def remove_box(self):
+    def __remove_box(self):
+        # get current image path
         idx = self.list_widget.currentRow()
         img_path = self.pos_img_dir + self.pos_img_files[idx]
+
+        # delete last box
         if len(self.bboxes) > 0:
             self.bboxes.pop()
             print self.bboxes
         else:
             self.logger.info('no bounding boxes to delete')
-        self.load_image(img_path)
+        self.__load_image(img_path)
 
-    def open(self):
+    def __open(self):
+        # get current image path
         idx = self.list_widget.currentRow()
         img_path = self.pos_img_dir + self.pos_img_files[idx]
+
+        # load
         self.logger.info('loading image file: %s', img_path)
-        self.load_bbox(img_path)
-        self.load_image(img_path)
+        self.__load_bbox(img_path)
+        self.__load_image(img_path)
 
 if __name__ == '__main__':
     import sys
