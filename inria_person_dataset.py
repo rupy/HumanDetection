@@ -181,8 +181,8 @@ if __name__ == '__main__':
     # inria.draw_bounding_boxes_for_all()
 
     # inria.create_crop_for_all()
-    # inria.create_samples(40, 40)
-    # inria.train_cascade('HOG', 0.4, 40, 40)
+    inria.create_samples(40, 40)
+    inria.train_cascade('HOG', 0.4, 0.995, 40, 40)
 
     inria.load_cascade_file()
     inria.detect_all()

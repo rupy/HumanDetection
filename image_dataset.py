@@ -97,7 +97,7 @@ class ImageDataSet:
         f.close()
         self.logger.info("completed writing data to negative.dat")
 
-    def train_cascade(self, feature_type='HOG', max_false_alarm_rate=0.4, width=24, height=24):
+    def train_cascade(self, feature_type='HOG', max_false_alarm_rate=0.4, min_hit_rate=0.995 ,width=24, height=24):
         pos_size = len(self.pos_img_files)
         neg_size = len(self.neg_img_files)
 
@@ -108,12 +108,13 @@ class ImageDataSet:
             'num_pos': pos_size * 0.8,
             'num_neg': neg_size,
             'feature_type': feature_type,
+            'min_hit_rate': min_hit_rate,
             'max_false_alarm_rate': max_false_alarm_rate,
             'width': width,
             'height': height
         }
 
-        cmd = "opencv_traincascade -data %(data)s -vec %(vec)s -bg %(bg)s -numPos %(num_pos)d -numNeg %(num_neg)d -featureType %(feature_type)s -maxFalseAlarmRate %(max_false_alarm_rate)s -w %(width)d -h %(height)d" % params
+        cmd = "opencv_traincascade -data %(data)s -vec %(vec)s -bg %(bg)s -numPos %(num_pos)d -numNeg %(num_neg)d -featureType %(feature_type)s -minHitRate %(min_hit_rate)s -maxFalseAlarmRate %(max_false_alarm_rate)s -w %(width)d -h %(height)d" % params
 
         self.logger.info("running command: %s", cmd)
         subprocess.call(cmd.strip().split(" "))
@@ -190,7 +191,7 @@ if __name__ == '__main__':
     dataset = ImageDataSet()
 
     # dataset.create_samples(24, 24)
-    # dataset.train_cascade('HOG', 0.4, 24, 24)
+    # dataset.train_cascade('HOG', 0.4, 0.995 24, 24)
 
     dataset.load_cascade_file()
     dataset.detect_all()
