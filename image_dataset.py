@@ -8,6 +8,10 @@ import logging
 import sys
 import yaml
 import subprocess
+try:
+   import cPickle as pickle
+except:
+   import pickle
 
 class ImageDataSet:
 
@@ -33,12 +37,16 @@ class ImageDataSet:
         # set output path
         self.out_dir = self.config['output']['out_dir']
         self.cascade_xml_dir = self.config['output']['cascade_xml_dir']
+        self.my_annotation_dir = self.config['output']['my_annotation_dir']
+        self.cropped_dir = self.config['output']['cropped_dir']
 
         # create output paths
         if not os.path.isdir(self.out_dir):
             os.makedirs(self.out_dir)
         if not os.path.isdir(self.cascade_xml_dir):
             os.makedirs(self.cascade_xml_dir)
+        if not os.path.isdir(self.cropped_dir):
+            os.makedirs(self.cropped_dir)
 
         # set array of all file names
         self.pos_img_files = [file_name for file_name in os.listdir(self.pos_img_dir) if not file_name.startswith('.')]
@@ -47,10 +55,63 @@ class ImageDataSet:
         self.neg_img_files.sort()
         self.test_img_files = [file_name for file_name in os.listdir(self.test_img_dir) if not file_name.startswith('.')]
         self.test_img_files.sort()
+        self.my_annotation_files = [file_name for file_name in os.listdir(self.my_annotation_dir) if not file_name.startswith('.')]
+        self.my_annotation_files.sort()
+        self.cropped_files = [file_name for file_name in os.listdir(self.cropped_dir) if not file_name.startswith('.')]
+        self.cropped_files.sort()
 
         self.cascade = None
 
-    def create_positive_dat(self):
+    def create_crop_with_myannotation(self):
+
+        self.logger.info("begin creating crop file")
+        for annotation_file_name in self.my_annotation_files:
+
+            img_file_name = os.path.splitext(annotation_file_name)[0]
+
+            img = cv2.imread(self.pos_img_dir + img_file_name)
+            self.logger.info("cropping: %s", img_file_name)
+
+            # annotation path
+            annotation_path = self.my_annotation_dir + annotation_file_name
+            f = open(annotation_path, 'rb')
+            bboxes = pickle.load(f)
+            f.close()
+
+            for i, box in enumerate(bboxes):
+                im_crop = iu.image_crop(img, box[0], box[1])
+                root, ext = os.path.splitext(img_file_name)
+                crop_file_name = root + str(i) + ext
+                cv2.imwrite(self.cropped_dir + crop_file_name, im_crop)
+        self.logger.info("completed creating crop file")
+
+    def create_positive_dat_with_my_annotation(self):
+        output_text = ""
+        self.logger.info("begin creating positive.dat")
+        for file_name in self.my_annotation_files:
+
+            # annotation path
+            annotation_path = self.my_annotation_dir + file_name
+            f = open(annotation_path, 'rb')
+            bboxes = pickle.load(f)
+            f.close()
+            root, ext = os.path.splitext(file_name)
+            output_text += "%s  %d  " % (self.pos_img_dir + root, len(bboxes))
+            for bbox in bboxes:
+                x_min, y_min = min(bbox[0][0], bbox[1][0]), min(bbox[0][1], bbox[1][1])
+                x_max, y_max = max(bbox[0][0], bbox[1][0]), max(bbox[0][1], bbox[1][1])
+                w = x_max - x_min
+                h = y_max - y_min
+                output_text += "%d %d %d %d  " % (x_min, y_min, w, h)
+            output_text += "\n"
+        # print output_text
+        self.logger.info("writing data to positive.dat")
+        f = open('positive.dat', 'w')
+        f.write(output_text)
+        f.close()
+        self.logger.info("completed writing data to positive.dat")
+
+    def create_positive_dat_by_image_size(self):
         output_text = ""
         self.logger.info("begin creating positive.dat")
         for file_name in self.pos_img_files:
@@ -66,9 +127,12 @@ class ImageDataSet:
         f.close()
         self.logger.info("completed writing data to positive.dat")
 
-    def create_samples(self, width=24, height=24):
+    def create_samples(self, use_my_annotation=False, width=24, height=24):
 
-        self.create_positive_dat()
+        if use_my_annotation:
+            self.create_positive_dat_with_my_annotation()
+        else:
+            self.create_positive_dat_by_image_size()
         self.create_negative_dat()
 
         params = {
@@ -190,7 +254,7 @@ if __name__ == '__main__':
 
     dataset = ImageDataSet()
 
-    # dataset.create_samples(24, 24)
+    # dataset.create_samples(True, 24, 24)
     # dataset.train_cascade('HOG', 0.4, 0.995 24, 24)
 
     dataset.load_cascade_file()
