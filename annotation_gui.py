@@ -13,7 +13,7 @@ import yaml
 
 class AnnotationGUI(QtGui.QWidget):
 
-    CONFIG_YAML = 'annotation_config.yml'
+    CONFIG_YAML = 'config.yml'
 
     def __init__(self):
 
@@ -93,8 +93,11 @@ class AnnotationGUI(QtGui.QWidget):
 
     def __init_list_widget(self):
 
+        # add list items
         self.list_widget.clear()
         self.list_widget.addItems(self.pos_img_files)
+
+        # set icon
         for i, is_made in enumerate([file + '.pkl' in self.my_annotation_files for file in self.pos_img_files]):
             if is_made:
                 self.list_widget.item(i).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogYesButton))
@@ -114,22 +117,44 @@ class AnnotationGUI(QtGui.QWidget):
             bboxes = pickle.load(f)
             f.close()
             c += len(bboxes)
+
+        # show count in message box
         msgBox = QtGui.QMessageBox()
         msgBox.setText("all boxes count: %d" % c)
         msgBox.exec_()
 
     def __load_bbox(self, img_path):
         if os.path.basename(img_path) in [os.path.splitext(annotation_file)[0] for annotation_file in self.my_annotation_files]:
-            self.__load(img_path)
+
+            # annotation path
+            base = os.path.basename(img_path)
+            annotation_path = self.my_annotation_dir + base + '.pkl'
+
+            self.logger.info('loading annotation file: %s', annotation_path)
+
+            # load pickle
+            f = open(annotation_path, 'rb')
+            self.bboxes = pickle.load(f)
+            f.close()
         else:
             self.bboxes = []
 
+    def __convert_cv_img2qt_img(self, cv_img):
+        height, width, dim = self.cv_img.shape
+        bytes_per_line = dim * width
+        qt_img = QtGui.QImage(cv_img.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+        qt_img_rgb = qt_img.rgbSwapped() # BGR to RGB
+        return qt_img_rgb
+
     def __load_image(self, img_path):
+
+        # read image
         self.cv_img = cv2.imread(img_path)
-        self.cv_bbox_img = self.__draw_dragging_area(self.cv_img)
-        qt_img = self.__convert_cv_img2qt_img(self.cv_bbox_img)
-        self.image_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
-        self.image_label.adjustSize()
+
+        # draw bounding boxes
+        self.__draw_bbox_and_set_image_label()
+
+        # set labels
         self.filename_label.setText(os.path.basename(img_path))
         self.box_num_label.setText("box num: %d" % len(self.bboxes))
 
@@ -152,7 +177,7 @@ class AnnotationGUI(QtGui.QWidget):
                 pt = (x, y)
                 self.end_pt = pt
                 # print "Dragging (%d, %d)" % pt
-                self.__update_image_label()
+                self.__draw_bbox_and_set_image_label()
         # drag end
         if event.type() == QtCore.QEvent.MouseButtonRelease and source is self.image_label:
             if event.button() == QtCore.Qt.LeftButton:
@@ -165,7 +190,7 @@ class AnnotationGUI(QtGui.QWidget):
                     self.bboxes.append((self.start_pt, self.end_pt))
                     self.start_pt = self.end_pt = None
                     # print "Drag end (%d, %d)" % pt
-                    self.__update_image_label()
+                    self.__draw_bbox_and_set_image_label()
                 self.box_num_label.setText("box num: %d" % len(self.bboxes))
 
         return QtGui.QWidget.eventFilter(self, source, event)
@@ -179,27 +204,21 @@ class AnnotationGUI(QtGui.QWidget):
             cv2.rectangle(im_copy, box[0], box[1], (0, 255, 0), 1)
         return im_copy
 
-    def __update_image_label(self):
+    def __draw_bbox_and_set_image_label(self):
         if self.cv_img is not None:
             self.cv_bbox_img = self.__draw_dragging_area(self.cv_img)
             qt_img = self.__convert_cv_img2qt_img(self.cv_bbox_img)
             self.image_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
-
-    def __convert_cv_img2qt_img(self, cv_img):
-        height, width, dim = self.cv_img.shape
-        bytes_per_line = dim * width
-        qt_img = QtGui.QImage(cv_img.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-        qt_img_rgb = qt_img.rgbSwapped()
-        return qt_img_rgb
+            self.image_label.adjustSize()
 
     def __save(self):
 
+        # image path
         idx = self.list_widget.currentRow()
         img_path = self.pos_img_dir + self.pos_img_files[idx]
         # annotation path
         base = os.path.basename(img_path)
         annotation_path = self.my_annotation_dir + base + '.pkl'
-
         # bbox path
         bbox_path = self.my_annotation_img_dir + 'bbox_' + base
 
@@ -222,17 +241,6 @@ class AnnotationGUI(QtGui.QWidget):
         msgBox = QtGui.QMessageBox()
         msgBox.setText("saved")
         msgBox.exec_()
-
-    def __load(self, img_path):
-        # annotation path
-        base = os.path.basename(img_path)
-        annotation_path = self.my_annotation_dir + base + '.pkl'
-        self.logger.info('loading annotation file: %s', annotation_path)
-
-        # load pickle
-        f = open(annotation_path, 'rb')
-        self.bboxes = pickle.load(f)
-        f.close()
 
     def __remove_box(self):
         # get current image path
@@ -264,6 +272,5 @@ if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
     ag = AnnotationGUI()
-    # ag.set_image_label('/Users/rupy/Documents/recruit_data/gazo/moto/C000103107.jpg')
     ag.show()
     sys.exit(app.exec_())
