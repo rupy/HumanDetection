@@ -8,10 +8,7 @@ import logging
 import sys
 import yaml
 import subprocess
-try:
-   import cPickle as pickle
-except:
-   import pickle
+import my_util
 
 class ImageDataSet:
 
@@ -39,6 +36,7 @@ class ImageDataSet:
         self.cascade_xml_dir = self.config['output']['cascade_xml_dir']
         self.my_annotation_dir = self.config['output']['my_annotation_dir']
         self.cropped_dir = self.config['output']['cropped_dir']
+        self.my_annotation_img_dir = self.config['output']['my_annotation_img_dir']
 
         # create output paths
         if not os.path.isdir(self.out_dir):
@@ -47,6 +45,8 @@ class ImageDataSet:
             os.makedirs(self.cascade_xml_dir)
         if not os.path.isdir(self.cropped_dir):
             os.makedirs(self.cropped_dir)
+        if not os.path.isdir(self.my_annotation_img_dir):
+            os.makedirs(self.my_annotation_img_dir)
 
         # set array of all file names
         self.pos_img_files = [file_name for file_name in os.listdir(self.pos_img_dir) if not file_name.startswith('.')]
@@ -62,22 +62,21 @@ class ImageDataSet:
 
         self.cascade = None
 
-    def create_crop_with_myannotation(self):
+    def create_crop_with_my_annotation(self):
 
         self.logger.info("begin creating crop file")
         for annotation_file_name in self.my_annotation_files:
 
+            # read image
             img_file_name = os.path.splitext(annotation_file_name)[0]
-
             img = cv2.imread(self.pos_img_dir + img_file_name)
             self.logger.info("cropping: %s", img_file_name)
 
-            # annotation path
+            # read my annotation
             annotation_path = self.my_annotation_dir + annotation_file_name
-            f = open(annotation_path, 'rb')
-            bboxes = pickle.load(f)
-            f.close()
+            bboxes = my_util.my_unpickle(annotation_path)
 
+            # crop
             for i, box in enumerate(bboxes):
                 im_crop = iu.image_crop(img, box[0], box[1])
                 root, ext = os.path.splitext(img_file_name)
@@ -92,9 +91,7 @@ class ImageDataSet:
 
             # annotation path
             annotation_path = self.my_annotation_dir + file_name
-            f = open(annotation_path, 'rb')
-            bboxes = pickle.load(f)
-            f.close()
+            bboxes = my_util.my_unpickle(annotation_path)
             root, ext = os.path.splitext(file_name)
             output_text += "%s  %d  " % (self.pos_img_dir + root, len(bboxes))
             for bbox in bboxes:
@@ -248,12 +245,76 @@ class ImageDataSet:
         for file in self.test_img_files:
             self.detect(self.test_img_dir + file)
 
+    def count_all_bboxes(self):
+        c = 0
+        for annotation_file in self.my_annotation_files:
+            annotation_path = self.my_annotation_dir + annotation_file
+            print annotation_path
+            bboxes = my_util.my_unpickle(annotation_path)
+            c += len(bboxes)
+        return c
+
+    def get_annotation_existence_list(self):
+        return [file + '.pkl' in self.my_annotation_files for file in self.pos_img_files]
+
+    def get_annotated_image_files(self):
+        return [os.path.splitext(annotation_file)[0] for annotation_file in self.my_annotation_files]
+
+    def get_annotation_path(self, img_file):
+        annotation_path = self.my_annotation_dir + img_file + '.pkl'
+        return annotation_path
+
+    def load_annotation(self, img_file):
+        bboxes = []
+        if img_file in self.get_annotated_image_files():
+
+            # annotation path
+            annotation_path = self.get_annotation_path(img_file)
+
+            self.logger.info('loading annotation file: %s', annotation_path)
+
+            # load pickle
+            bboxes = my_util.my_unpickle(annotation_path)
+        return bboxes
+
+    def save_annotation(self, img_file, bboxes):
+        annotation_path = self.get_annotation_path(img_file)
+        self.logger.info('saving annotation data: %s', annotation_path)
+        my_util.my_pickle(bboxes, annotation_path)
+
+    def draw_areas(self, im_orig, start_pt, end_pt, bboxes):
+        im_copy = im_orig.copy()
+        # draw rectangles
+        if start_pt is not None and end_pt is not None:
+            cv2.rectangle(im_copy, start_pt, end_pt, (0, 0, 255), 1)
+        for box in bboxes:
+            cv2.rectangle(im_copy, box[0], box[1], (0, 255, 0), 1)
+        return im_copy
+
+    def read_img(self, img_file):
+        self.logger.info('loading image file: %s', img_file)
+        img_path = self.pos_img_dir + img_file
+
+        # read image
+        cv_img = cv2.imread(img_path)
+        return cv_img
+
+    def write_bbox_img(self, img_file, cv_bbox_img):
+        bbox_path = self.my_annotation_img_dir + 'bbox_' + img_file
+        self.logger.info('saving bounding box data: %s', bbox_path)
+        cv2.imwrite(bbox_path, cv_bbox_img)
+
+    def reload_my_annotation_files(self):
+        self.my_annotation_files = [file_name for file_name in os.listdir(self.my_annotation_dir) if not file_name.startswith('.')]
+        self.my_annotation_files.sort()
+
 if __name__ == '__main__':
 
     logging.root.setLevel(level=logging.INFO)
 
     dataset = ImageDataSet()
 
+    # dataset.create_crop_with_myannotation()
     # dataset.create_samples(True, 24, 24)
     # dataset.train_cascade('HOG', 0.4, 0.995 24, 24)
 
