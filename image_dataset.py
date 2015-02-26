@@ -1,7 +1,6 @@
 #coding: utf-8
 
 import os
-import re
 import cv2
 import image_util as iu
 import logging
@@ -12,7 +11,13 @@ import my_util
 
 class ImageDataSet:
 
-    CONFIG_YAML = 'config.yml'
+    CONFIG_YAML = 'nail_config.yml'
+
+    OUT_DIR = 'outdir/'
+    CROPPED_DIR = 'cropped/'
+    CASCADE_XML_DIR = 'hog/'
+    MY_ANNOTATION_DIR = 'my_annotation/'
+    MY_ANNOTATION_IMG_DIR = 'bbox/'
 
     def __init__(self):
 
@@ -26,23 +31,31 @@ class ImageDataSet:
         self.config = yaml.load(f)
         f.close()
 
+        self.__init_dir()
+
+        self.cascade = None
+
+    def __init_dir(self):
         # set dataset path
         self.pos_img_dir = self.config['dataset']['pos_img_dir']
         self.neg_img_dir = self.config['dataset']['neg_img_dir']
         self.test_img_dir = self.config['dataset']['test_img_dir']
 
         # set output path
-        self.out_dir = self.config['output']['out_dir']
-        self.cascade_xml_dir = self.config['output']['cascade_xml_dir']
-        self.my_annotation_dir = self.config['output']['my_annotation_dir']
-        self.cropped_dir = self.config['output']['cropped_dir']
-        self.my_annotation_img_dir = self.config['output']['my_annotation_img_dir']
+        self.output_dir = self.config['output']['output_dir']
+        self.out_dir = self.output_dir + self.OUT_DIR
+        self.cascade_xml_dir = self.output_dir + self.CASCADE_XML_DIR
+        self.my_annotation_dir = self.output_dir + self.MY_ANNOTATION_DIR
+        self.cropped_dir = self.output_dir + self.CROPPED_DIR
+        self.my_annotation_img_dir = self.output_dir + self.MY_ANNOTATION_IMG_DIR
 
         # create output paths
         if not os.path.isdir(self.out_dir):
             os.makedirs(self.out_dir)
         if not os.path.isdir(self.cascade_xml_dir):
             os.makedirs(self.cascade_xml_dir)
+        if not os.path.isdir(self.my_annotation_dir):
+            os.makedirs(self.my_annotation_dir)
         if not os.path.isdir(self.cropped_dir):
             os.makedirs(self.cropped_dir)
         if not os.path.isdir(self.my_annotation_img_dir):
@@ -60,7 +73,11 @@ class ImageDataSet:
         self.cropped_files = [file_name for file_name in os.listdir(self.cropped_dir) if not file_name.startswith('.')]
         self.cropped_files.sort()
 
-        self.cascade = None
+    def save_config(self):
+        f = open(self.CONFIG_YAML, 'w')
+        f.write(yaml.dump(self.config, default_flow_style=False))
+        f.close()
+        print yaml.dump(self.config, default_flow_style=False)
 
     def create_crop_with_my_annotation(self):
 

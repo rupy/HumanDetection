@@ -9,12 +9,10 @@ try:
    import cPickle as pickle
 except:
    import pickle
-import yaml
-
-import my_util
 import image_dataset
+import config_dialog
 
-class AnnotationGUI(QtGui.QWidget):
+class AnnotationGUI(QtGui.QMainWindow):
 
     def __init__(self):
 
@@ -34,7 +32,13 @@ class AnnotationGUI(QtGui.QWidget):
         self.end_pt = None
         self.bboxes = []
 
+        self.resize(800, 600)
+        self.__init_menu_bar()
+        self.__init_tool_bar()
+        self.__init_status_bar()
         self.__init_ui()
+
+        self.dialog = None
 
 
     def __init_ui(self):
@@ -43,32 +47,53 @@ class AnnotationGUI(QtGui.QWidget):
         self.image_label.setBackgroundRole(QtGui.QPalette.Base)
         self.image_label.installEventFilter(self)
 
-        self.filename_label = QtGui.QLabel(self)
-        self.filename_label.setText("")
-
-        self.save_button = QtGui.QPushButton('save', self)
-        self.save_button.clicked.connect(self.__save)
-
-        self.undo_button = QtGui.QPushButton('undo', self)
-        self.undo_button.clicked.connect(self.__remove_box)
-
-        self.count_button = QtGui.QPushButton('count all boxes', self)
-        self.count_button.clicked.connect(self.count_all_bbox)
-
         self.list_widget = QtGui.QListWidget(self)
-        self.list_widget.itemSelectionChanged.connect(self.__open)
+        self.list_widget.itemSelectionChanged.connect(self.open)
 
-        self.box_num_label = QtGui.QLabel(self)
-
-        self.list_widget.setGeometry(10, 10, 200, 200)
-        self.image_label.move(220, 10)
-        self.save_button.move(10, 220)
-        self.undo_button.move(100, 220)
-        self.count_button.move(10, 250)
-        self.filename_label.move(10, 280)
-        self.box_num_label.move(10, 310)
+        self.list_widget.setGeometry(10, 50, 200, 500)
+        self.image_label.move(220, 50)
 
         self.__init_list_widget()
+
+    def __init_menu_bar(self):
+        menu_bar = QtGui.QMenuBar()
+        file_menu = QtGui.QMenu('File', self)
+        open_action = file_menu.addAction('Open')
+        open_action.triggered.connect(self.open_dir_dialog)
+        exit_action = file_menu.addAction('Close Annotation Tool')
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.triggered.connect(QtGui.qApp.quit)
+        menu_bar.addMenu(file_menu)
+        self.setMenuBar(menu_bar)
+
+    def __init_tool_bar(self):
+        open_action = QtGui.QAction(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon), 'Open', self)
+        open_action.triggered.connect(self.open_dir_dialog)
+        open_action.setShortcut('Ctrl+O')
+
+        save_action = QtGui.QAction(self.style().standardIcon(QtGui.QStyle.SP_DialogSaveButton), 'Save', self)
+        save_action.triggered.connect(self.save)
+        save_action.setShortcut('Ctrl+S')
+
+        undo_action = QtGui.QAction(self.style().standardIcon(QtGui.QStyle.SP_TrashIcon), 'Undo', self)
+        undo_action.triggered.connect(self.remove_box)
+        undo_action.setShortcut('Ctrl+Z')
+
+        count_action = QtGui.QAction(self.style().standardIcon(QtGui.QStyle.SP_MessageBoxInformation), 'Count', self)
+        count_action.triggered.connect(self.count_all_bbox)
+        count_action.setShortcut('Ctrl+C')
+
+        self.toolbar = self.addToolBar('Toolbar')
+        self.toolbar.addAction(open_action)
+        self.toolbar.addAction(save_action)
+        self.toolbar.addAction(undo_action)
+        self.toolbar.addAction(count_action)
+
+    def __init_status_bar(self):
+        self.status_label = QtGui.QLabel()
+        self.status_label.setText('')
+        self.status_bar = self.statusBar()
+        self.status_bar.addWidget(self.status_label)
 
     def __init_list_widget(self):
 
@@ -84,6 +109,14 @@ class AnnotationGUI(QtGui.QWidget):
                 self.list_widget.item(i).setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogNoButton))
         self.list_widget.setCurrentRow(0)
 
+    def open_dir_dialog(self):
+        self.dialog = config_dialog.ConfigDialig(self, self.dataset)
+        result = self.dialog.exec_()
+        if result == QtGui.QDialog.Accepted:
+            self.dataset.save_config()
+        elif result == QtGui.QDialog.Rejected:
+            pass
+        print result
 
     def count_all_bbox(self):
 
@@ -109,8 +142,7 @@ class AnnotationGUI(QtGui.QWidget):
         self.__set_image_label()
 
         # set labels
-        self.filename_label.setText(img_file)
-        self.box_num_label.setText("box num: %d" % len(self.bboxes))
+        self.status_label.setText("box num: %d" % len(self.bboxes))
 
     def eventFilter(self, source, event):
         # drag start
@@ -147,7 +179,7 @@ class AnnotationGUI(QtGui.QWidget):
                     # print "Drag end (%d, %d)" % pt
                     self.__draw_bbox()
                     self.__set_image_label()
-                self.box_num_label.setText("box num: %d" % len(self.bboxes))
+                self.status_label.setText("box num: %d" % len(self.bboxes))
 
         return QtGui.QWidget.eventFilter(self, source, event)
 
@@ -161,7 +193,7 @@ class AnnotationGUI(QtGui.QWidget):
             self.image_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
             self.image_label.adjustSize()
 
-    def __save(self):
+    def save(self):
 
         # image path
         idx = self.list_widget.currentRow()
@@ -182,7 +214,7 @@ class AnnotationGUI(QtGui.QWidget):
         msgBox.setText("saved")
         msgBox.exec_()
 
-    def __remove_box(self):
+    def remove_box(self):
         # get current image path
         idx = self.list_widget.currentRow()
         img_file = self.dataset.pos_img_files[idx]
@@ -195,7 +227,7 @@ class AnnotationGUI(QtGui.QWidget):
             self.logger.info('no bounding boxes to delete')
         self.__load_image(img_file)
 
-    def __open(self):
+    def open(self):
         # get current image path
         idx = self.list_widget.currentRow()
         img_file = self.dataset.pos_img_files[idx]
@@ -210,6 +242,7 @@ if __name__ == '__main__':
     logging.root.setLevel(level=logging.INFO)
 
     app = QtGui.QApplication(sys.argv)
+    # app.setStyle(QtGui.QStyleFactory.create('Cleanlooks'))
     ag = AnnotationGUI()
     ag.show()
     sys.exit(app.exec_())

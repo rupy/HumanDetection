@@ -5,14 +5,13 @@ import re
 import cv2
 import image_util as iu
 import logging
-import sys
-import yaml
-import subprocess
 from image_dataset import ImageDataSet
 
 class InriaPersonDataSet(ImageDataSet):
 
-    CONFIG_YAML = 'config.yml'
+    BBOX_DIR = 'bounding_box'
+    ANNOTATION_DIR = 'annoation'
+    CONFIG_YAML = 'inria_config.yml'
 
     def __init__(self):
 
