@@ -26,6 +26,14 @@ class AnnotationGUI(QtGui.QMainWindow):
 
         self.dataset = image_dataset.ImageDataSet()
 
+
+        self.dialog = None
+        if self.dataset.pos_img_dir == ''\
+                or self.dataset.output_dir == ''\
+                or not os.path.isdir(self.dataset.pos_img_dir)\
+                or not os.path.isdir(self.dataset.output_dir):
+            self.open_dir_dialog()
+
         self.cv_img = None
         self.cv_bbox_img = None
         self.start_pt = None
@@ -38,7 +46,6 @@ class AnnotationGUI(QtGui.QMainWindow):
         self.__init_status_bar()
         self.__init_ui()
 
-        self.dialog = None
 
 
     def __init_ui(self):
@@ -114,6 +121,8 @@ class AnnotationGUI(QtGui.QMainWindow):
         result = self.dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             self.dataset.save_config()
+            self.__init_list_widget()
+            self.open()
         elif result == QtGui.QDialog.Rejected:
             pass
         print result
@@ -125,21 +134,21 @@ class AnnotationGUI(QtGui.QMainWindow):
         msgBox.setText("all boxes count: %d" % self.dataset.count_all_bboxes())
         msgBox.exec_()
 
-    def __convert_cv_img2qt_img(self, cv_img):
+    def convert_cv_img2qt_img(self, cv_img):
         height, width, dim = cv_img.shape
         bytes_per_line = dim * width
         qt_img = QtGui.QImage(cv_img.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
         qt_img_rgb = qt_img.rgbSwapped() # BGR to RGB
         return qt_img_rgb
 
-    def __load_image(self, img_file):
+    def load_image(self, img_file):
 
         # read image
         self.cv_img = self.dataset.read_img(img_file)
 
         # draw bounding boxes
-        self.__draw_bbox()
-        self.__set_image_label()
+        self.draw_bbox()
+        self.set_image_label()
 
         # set labels
         self.status_label.setText("box num: %d" % len(self.bboxes))
@@ -163,8 +172,8 @@ class AnnotationGUI(QtGui.QMainWindow):
                 pt = (x, y)
                 self.end_pt = pt
                 # print "Dragging (%d, %d)" % pt
-                self.__draw_bbox()
-                self.__set_image_label()
+                self.draw_bbox()
+                self.set_image_label()
         # drag end
         if event.type() == QtCore.QEvent.MouseButtonRelease and source is self.image_label:
             if event.button() == QtCore.Qt.LeftButton:
@@ -177,19 +186,19 @@ class AnnotationGUI(QtGui.QMainWindow):
                     self.bboxes.append((self.start_pt, self.end_pt))
                     self.start_pt = self.end_pt = None
                     # print "Drag end (%d, %d)" % pt
-                    self.__draw_bbox()
-                    self.__set_image_label()
+                    self.draw_bbox()
+                    self.set_image_label()
                 self.status_label.setText("box num: %d" % len(self.bboxes))
 
         return QtGui.QWidget.eventFilter(self, source, event)
 
-    def __draw_bbox(self):
+    def draw_bbox(self):
         if self.cv_img is not None:
             self.cv_bbox_img = self.dataset.draw_areas(self.cv_img, self.start_pt, self.end_pt, self.bboxes)
 
-    def __set_image_label(self):
+    def set_image_label(self):
         if self.cv_bbox_img is not None:
-            qt_img = self.__convert_cv_img2qt_img(self.cv_bbox_img)
+            qt_img = self.convert_cv_img2qt_img(self.cv_bbox_img)
             self.image_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
             self.image_label.adjustSize()
 
@@ -225,7 +234,7 @@ class AnnotationGUI(QtGui.QMainWindow):
             print self.bboxes
         else:
             self.logger.info('no bounding boxes to delete')
-        self.__load_image(img_file)
+        self.load_image(img_file)
 
     def open(self):
         # get current image path
@@ -234,7 +243,7 @@ class AnnotationGUI(QtGui.QMainWindow):
 
         # load
         self.bboxes = self.dataset.load_annotation(img_file)
-        self.__load_image(img_file)
+        self.load_image(img_file)
 
 if __name__ == '__main__':
     import sys

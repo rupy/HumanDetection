@@ -11,7 +11,7 @@ import my_util
 
 class ImageDataSet:
 
-    CONFIG_YAML = 'nail_config.yml'
+    CONFIG_YAML = 'config.yml'
 
     OUT_DIR = 'outdir/'
     CROPPED_DIR = 'cropped/'
@@ -36,6 +36,20 @@ class ImageDataSet:
         self.cascade = None
 
     def __init_dir(self):
+
+        if 'dataset' not in self.config:
+            self.config['dataset'] = None
+        if 'pos_img_dir' not in self.config['dataset']:
+            self.config['dataset']['pos_img_dir'] = ''
+        if 'neg_img_dir' not in self.config['dataset']:
+            self.config['dataset']['neg_img_dir'] = ''
+        if 'test_img_dir' not in self.config['dataset']:
+            self.config['dataset']['test_img_dir'] = ''
+        if 'output' not in self.config:
+            self.config['output'] = None
+        if 'output_dir' not in self.config['output']:
+            self.config['dataset']['output_dir'] = ''
+
         # set dataset path
         self.pos_img_dir = self.config['dataset']['pos_img_dir']
         self.neg_img_dir = self.config['dataset']['neg_img_dir']
@@ -78,6 +92,7 @@ class ImageDataSet:
         f.write(yaml.dump(self.config, default_flow_style=False))
         f.close()
         print yaml.dump(self.config, default_flow_style=False)
+        self.__init_dir()
 
     def create_crop_with_my_annotation(self):
 
@@ -175,7 +190,7 @@ class ImageDataSet:
         f.close()
         self.logger.info("completed writing data to negative.dat")
 
-    def train_cascade(self, feature_type='HOG', max_false_alarm_rate=0.4, min_hit_rate=0.995 ,width=24, height=24):
+    def train_cascade(self, feature_type='HOG', max_false_alarm_rate=0.4, min_hit_rate=0.995 ,width=24, height=24, pos_rate=0.8):
         pos_size = len(self.pos_img_files)
         neg_size = len(self.neg_img_files)
 
@@ -183,7 +198,7 @@ class ImageDataSet:
             'data': self.cascade_xml_dir,
             'vec': 'positive.vec',
             'bg': 'negative.dat',
-            'num_pos': pos_size * 0.8,
+            'num_pos': pos_size * pos_rate,
             'num_neg': neg_size,
             'feature_type': feature_type,
             'min_hit_rate': min_hit_rate,
@@ -197,13 +212,13 @@ class ImageDataSet:
         self.logger.info("running command: %s", cmd)
         subprocess.call(cmd.strip().split(" "))
 
-    def __inside(self, r, q):
+    def inside(self, r, q):
         rx, ry, rw, rh = r
         qx, qy, qw, qh = q
         return rx > qx and ry > qy and rx + rw < qx + qw and ry + rh < qy + qh
 
 
-    def __draw_detections(self, img, rects, thickness = 1):
+    def draw_detections(self, img, rects, thickness = 1):
         for x, y, w, h in rects:
             # the HOG detector returns slightly larger rectangles than the real objects.
             # so we slightly shrink the rectangles to get a nicer output.
@@ -234,14 +249,14 @@ class ImageDataSet:
         found_filtered = []
         for ri, r in enumerate(found):
             for qi, q in enumerate(found):
-                if ri != qi and self.__inside(r, q):
+                if ri != qi and self.inside(r, q):
                     break
                 else:
                     found_filtered.append(r)
 
         # draw detection areas
-        self.__draw_detections(img, found)
-        self.__draw_detections(img, found_filtered, 3)
+        self.draw_detections(img, found)
+        self.draw_detections(img, found_filtered, 3)
         print '%d (%d) found' % (len(found_filtered), len(found))
 
         # show result
