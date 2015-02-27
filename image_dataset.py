@@ -11,7 +11,7 @@ import my_util
 
 class ImageDataSet:
 
-    CONFIG_YAML = 'config.yml'
+    CONFIG_YAML = 'nail_config.yml'
 
     OUT_DIR = 'outdir/'
     CROPPED_DIR = 'cropped/'
@@ -37,6 +37,7 @@ class ImageDataSet:
 
     def __init_dir(self):
 
+        # assign empty value if dictionary is not set
         if 'dataset' not in self.config:
             self.config['dataset'] = None
         if 'pos_img_dir' not in self.config['dataset']:
@@ -88,10 +89,14 @@ class ImageDataSet:
         self.cropped_files.sort()
 
     def save_config(self):
+
+        # save config.yml
+        self.logger.info("saving config file")
         f = open(self.CONFIG_YAML, 'w')
         f.write(yaml.dump(self.config, default_flow_style=False))
         f.close()
-        print yaml.dump(self.config, default_flow_style=False)
+
+        # reload valuables related directories
         self.__init_dir()
 
     def create_crop_with_my_annotation(self):
@@ -110,7 +115,11 @@ class ImageDataSet:
 
             # crop
             for i, box in enumerate(bboxes):
-                im_crop = iu.image_crop(img, box[0], box[1])
+                left_up_x = min(box[0][0], box[1][0])
+                left_up_y = min(box[0][1], box[1][1])
+                right_down_x = max(box[0][0], box[1][0])
+                right_down_y = max(box[0][1], box[1][1])
+                im_crop = iu.image_crop(img, (left_up_x, left_up_y), (right_down_x, right_down_y))
                 root, ext = os.path.splitext(img_file_name)
                 crop_file_name = root + str(i) + ext
                 cv2.imwrite(self.cropped_dir + crop_file_name, im_crop)
@@ -133,7 +142,7 @@ class ImageDataSet:
                 h = y_max - y_min
                 output_text += "%d %d %d %d  " % (x_min, y_min, w, h)
             output_text += "\n"
-        # print output_text
+
         self.logger.info("writing data to positive.dat")
         f = open('positive.dat', 'w')
         f.write(output_text)
@@ -149,7 +158,6 @@ class ImageDataSet:
             im = cv2.imread(file_path)
             output_text += "%s  %d  " % (file_path, 1)
             output_text += "%d %d %d %d  \n" % (0, 0, im.shape[0], im.shape[1])
-        # print output_text
         self.logger.info("writing data to positive.dat")
         f = open('positive.dat', 'w')
         f.write(output_text)
@@ -183,7 +191,6 @@ class ImageDataSet:
             file_path = self.neg_img_dir + file_name
             output_text += file_path
             output_text += "\n"
-        # print output_text
         self.logger.info("writing data to negative.dat")
         f = open('negative.dat', 'w')
         f.write(output_text)
@@ -278,13 +285,13 @@ class ImageDataSet:
             self.detect(self.test_img_dir + file)
 
     def count_all_bboxes(self):
-        c = 0
+        sum = 0
         for annotation_file in self.my_annotation_files:
             annotation_path = self.my_annotation_dir + annotation_file
-            print annotation_path
+            # print annotation_path
             bboxes = my_util.my_unpickle(annotation_path)
-            c += len(bboxes)
-        return c
+            sum += len(bboxes)
+        return sum
 
     def get_annotation_existence_list(self):
         return [file + '.pkl' in self.my_annotation_files for file in self.pos_img_files]
@@ -295,6 +302,11 @@ class ImageDataSet:
     def get_annotation_path(self, img_file):
         annotation_path = self.my_annotation_dir + img_file + '.pkl'
         return annotation_path
+
+    def get_img_file_by_annotation_file(self, annotation_file):
+        img_file = os.path.splitext(annotation_file)[0]
+        return img_file
+
 
     def load_annotation(self, img_file):
         bboxes = []
@@ -331,6 +343,18 @@ class ImageDataSet:
         cv_img = cv2.imread(img_path)
         return cv_img
 
+    def draw_bounding_boxes_for_all(self):
+        self.logger.info("begin drawing bounding boxes")
+        for file_name in self.my_annotation_files:
+
+            img_file = self.get_img_file_by_annotation_file(file_name)
+            cv_img = self.read_img(img_file)
+            bboxes = self.load_annotation(img_file)
+            cv_bbox_img = self.draw_areas(cv_img, None, None, bboxes)
+            # draw bounding box
+            self.write_bbox_img(img_file, cv_bbox_img)
+
+
     def write_bbox_img(self, img_file, cv_bbox_img):
         bbox_path = self.my_annotation_img_dir + 'bbox_' + img_file
         self.logger.info('saving bounding box data: %s', bbox_path)
@@ -346,11 +370,11 @@ if __name__ == '__main__':
 
     dataset = ImageDataSet()
 
-    # dataset.create_crop_with_myannotation()
+    dataset.create_crop_with_my_annotation()
     # dataset.create_samples(True, 24, 24)
     # dataset.train_cascade('HOG', 0.4, 0.995 24, 24)
 
-    dataset.load_cascade_file()
-    dataset.detect_all()
+    # dataset.load_cascade_file()
+    # dataset.detect_all()
     # dataset.detect('./INRIAPerson/Train/pos/crop001509.png')
 #

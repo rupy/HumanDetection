@@ -246,7 +246,9 @@ class AnnotationGUI(QtGui.QMainWindow):
         self.load_image(img_file)
 
 if __name__ == '__main__':
+
     import sys
+
     # log level setting
     logging.root.setLevel(level=logging.INFO)
 
